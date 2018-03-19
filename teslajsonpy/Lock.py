@@ -1,5 +1,6 @@
-from teslajsonpy.vehicle import VehicleDevice
 import time
+
+from teslajsonpy.vehicle import VehicleDevice
 
 
 class Lock(VehicleDevice):

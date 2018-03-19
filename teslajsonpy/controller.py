@@ -1,17 +1,29 @@
 import time
 from multiprocessing import RLock
-from teslajsonpy.connection import Connection
+
 from teslajsonpy.BatterySensor import Battery, Range
-from teslajsonpy.Lock import Lock
-from teslajsonpy.Climate import Climate, TempSensor
-from teslajsonpy.BinarySensor import ParkingSensor, ChargerConnectionSensor
+from teslajsonpy.BinarySensor import ChargerConnectionSensor, ParkingSensor
 from teslajsonpy.Charger import ChargerSwitch, RangeSwitch
+from teslajsonpy.Climate import Climate, TempSensor
+from teslajsonpy.connection import ConnectionTesla, ConnectionTeslaFi
 from teslajsonpy.GPS import GPS, Odometer
+from teslajsonpy.Lock import Lock
 
 
 class Controller:
-    def __init__(self, email, password, update_interval):
-        self.__connection = Connection(email, password)
+    def __init__(
+            self, email="",
+            password="", teslafi="", update_interval=300,
+            miles=False, rated=False):
+        if email and password:
+            self.__connection = ConnectionTesla(email, password)
+            self.__is_proxy = False
+        elif teslafi:
+            self.__connection = ConnectionTeslaFi(teslafi, miles, rated)
+            self.__is_proxy = True
+        else:
+            raise TeslaException(code=401)
+
         self.__vehicles = []
         self.update_interval = update_interval
         self.__climate = {}
@@ -53,7 +65,8 @@ class Controller:
         return self.__vehicles
 
     def wake_up(self, vehicle_id):
-        self.post(vehicle_id, 'wake_up')
+        if not self.__is_proxy:
+            self.post(vehicle_id, 'wake_up')
 
     def update(self, car_id):
         cur_time = time.time()
@@ -62,11 +75,18 @@ class Controller:
                 self.wake_up(car_id)
                 data = self.get(car_id, 'data')
                 if data and data['response']:
-                    self.__climate[car_id] = data['response']['climate_state']
-                    self.__charging[car_id] = data['response']['charge_state']
-                    self.__state[car_id] = data['response']['vehicle_state']
-                    self.__driving[car_id] = data['response']['drive_state']
-                    self.__gui[car_id] = data['response']['gui_settings']
+                    if self.__is_proxy:
+                        self.__climate[car_id] = data['response']
+                        self.__charging[car_id] = data['response']
+                        self.__state[car_id] = data['response']
+                        self.__driving[car_id] = data['response']
+                        self.__gui[car_id] = data['response']
+                    else:
+                        self.__climate[car_id] = data['response']['climate_state']
+                        self.__charging[car_id] = data['response']['charge_state']
+                        self.__state[car_id] = data['response']['vehicle_state']
+                        self.__driving[car_id] = data['response']['drive_state']
+                        self.__gui[car_id] = data['response']['gui_settings']
                     self.__last_update_time[car_id] = time.time()
                 else:
                     self.__climate[car_id] = False

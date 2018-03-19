@@ -1,5 +1,6 @@
-from teslajsonpy.vehicle import VehicleDevice
 import time
+
+from teslajsonpy.vehicle import VehicleDevice
 
 
 class Climate(VehicleDevice):
@@ -56,7 +57,8 @@ class Climate(VehicleDevice):
     def set_temperature(self, temp):
         temp = round(temp, 1)
         self.__manual_update_time = time.time()
-        data = self._controller.command(self._id, 'set_temps', {"driver_temp": temp, "passenger_temp": temp})
+        data = self._controller.command(
+            self._id, 'set_temps', {"driver_temp": temp, "passenger_temp": temp})
         if data['response']['result']:
             self.__driver_temp_setting = temp
             self.__passenger_temp_setting = temp
@@ -64,7 +66,8 @@ class Climate(VehicleDevice):
     def set_status(self, enabled):
         self.__manual_update_time = time.time()
         if enabled:
-            data = self._controller.command(self._id, 'auto_conditioning_start')
+            data = self._controller.command(
+                self._id, 'auto_conditioning_start')
             if data['response']['result']:
                 self.__is_auto_conditioning_on = True
                 self.__is_climate_on = True
